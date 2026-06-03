@@ -1,0 +1,35 @@
+import torch # type: ignore
+from dataclasses import dataclass 
+from .util import complex_to_real_dtype
+
+@dataclass
+class SimParams:
+    Ny: int
+    Nx: int
+    dx: float
+    device: torch.device
+    dtype: torch.dtype
+    lams: torch.Tensor
+    weights: torch.Tensor
+
+    def __post_init__(self):
+        complex_dtype = self.dtype
+
+        real_dtype = complex_to_real_dtype(complex_dtype)
+        self.x = torch.linspace(-self.Nx/2, self.Nx/2, steps=self.Nx, dtype=real_dtype, device=self.device) * self.dx
+        self.y = torch.linspace(-self.Ny/2, self.Ny/2, steps=self.Ny, dtype=real_dtype, device=self.device) * self.dx
+        self.Y, self.X = torch.meshgrid(self.y, self.x, indexing='ij')
+
+    def __str__(self):
+        return f"SimParams(Ny={self.Ny}, Nx={self.Nx}, dx={self.dx}, device={self.device}, lams={self.lams}, weights={self.weights}"
+
+    def copy(self):
+        return SimParams(
+            Ny = self.Ny, 
+            Nx = self.Nx, 
+            dx = self.dx, 
+            device = self.device, 
+            dtype = self.dtype, 
+            lams = self.lams, 
+            weights = self.weights
+            )

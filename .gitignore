@@ -1,0 +1,12 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+outputs/
+logs/
+slurms/
+*.npz
+*_params_*.npy
+*_sweep_arrays_*.npy

@@ -1,0 +1,6 @@
+nlopt
+matplotlib
+numpy
+pandas
+scipy
+torch
