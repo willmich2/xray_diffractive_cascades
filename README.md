@@ -132,4 +132,4 @@ sbatch hpc/slurm/run_sweep.sh n_sweeps --save-dir paper_data
 
 If you use this code, please cite:
 
-William Michaels, Simo Pajovic, Joshua Chen, Charles Roques-Carmes, and Marin Soljacic, "Diffractive cascades for polychromatic hard X-ray focusing," arXiv:2605.15526, 2026.
+William Michaels, Simo Pajovic, Joshua Chen, Charles Roques-Carmes, and Marin Soljačić, "Diffractive cascades for polychromatic hard X-ray focusing," arXiv:2605.15526, 2026.
