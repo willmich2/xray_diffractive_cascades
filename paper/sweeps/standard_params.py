@@ -37,7 +37,7 @@ N_WVL_DEFAULT: Final[int] = 7
 CENTRAL_ENERGY_EV_DEFAULT: Final[float] = 10e3
 BANDWIDTH_DEFAULT: Final[float] = 1e-4
 
-NX_DEFAULT: Final[int] = 2**13
+NX_DEFAULT: Final[int] = 2**16
 DX_DEFAULT: Final[float] = 10e-9
 MIN_FEATURE_SIZE_DEFAULT: Final[float] = 50e-9
 N_ELEMENTS_DEFAULT: Final[int] = 10
