@@ -7,9 +7,7 @@ import os
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.util import (
-    create_material_map,
     gaussian_energy_spectrum,
-    width_central_peak,
     get_formatted_datetime,
     airy_1d_intensity,
     compute_opt_and_fzp_metrics_2d,
@@ -61,21 +59,21 @@ bandwidth = BANDWIDTH_DEFAULT
 
 # Script-specific overrides. These values keep the example short; use the
 # paper defaults in `paper/sweeps/standard_params.py` for production runs.
-N_wvl = 3
-Nx = 2**10
+N_wvl = N_WVL_DEFAULT
+Nx = NX_DEFAULT
 dx = DX_DEFAULT
 f = F_DEFAULT
 inter_elem_dist = INTER_ELEM_DIST_DEFAULT
 membrane_thickness = MEMBRANE_THICKNESS_DEFAULT
 element_thickness = ELEMENT_THICKNESS_DEFAULT
 min_feature_size = MIN_FEATURE_SIZE_DEFAULT
-Nelem = 2
+Nelem = N_ELEMENTS_DEFAULT
 focusing_threshold = FOCUSING_THRESHOLD_DEFAULT
 crop_width = CROP_WIDTH_DEFAULT
 epsilon = EPSILON_DEFAULT
 tolerance = TOLERANCE_DEFAULT
 param_tolerance = PARAM_TOLERANCE_DEFAULT
-max_eval = 5
+max_eval = MAX_EVAL_DEFAULT
 min_beta = MIN_BETA_DEFAULT
 constraint_fac = CONSTRAINT_FAC_DEFAULT
 P = P_DEFAULT
