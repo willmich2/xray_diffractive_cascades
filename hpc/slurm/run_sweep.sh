@@ -23,16 +23,18 @@ fi
 STUDY_NAME="$1"
 shift
 
-if command -v module >/dev/null 2>&1; then
-  module load conda/Python-ML-2025b-pytorch
-fi
-
 if [[ -n "${SLURM_SUBMIT_DIR:-}" ]]; then
-  REPO_ROOT="${SLURM_SUBMIT_DIR}"
+  if [[ -f "${SLURM_SUBMIT_DIR}/hpc/slurm/_gpu_env.sh" ]]; then
+    source "${SLURM_SUBMIT_DIR}/hpc/slurm/_gpu_env.sh"
+  elif [[ -f "${SLURM_SUBMIT_DIR}/_gpu_env.sh" ]]; then
+    source "${SLURM_SUBMIT_DIR}/_gpu_env.sh"
+  else
+    echo "Could not find _gpu_env.sh under SLURM_SUBMIT_DIR=${SLURM_SUBMIT_DIR}" >&2
+    exit 1
+  fi
 else
-  REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+  source "$(cd "$(dirname "$0")" && pwd)/_gpu_env.sh"
 fi
-cd "${REPO_ROOT}"
 
 echo "Running paper sweep study: ${STUDY_NAME}"
 python paper/sweeps/run_sweep.py --study "${STUDY_NAME}" "$@"

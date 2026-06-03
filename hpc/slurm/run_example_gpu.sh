@@ -8,8 +8,9 @@
 
 # Run an examples/ script on GPU with default SLURM resources.
 #
-# Submit from the repository root:
+# Submit from the repository root or from hpc/slurm/:
 #   sbatch hpc/slurm/run_example_gpu.sh examples/<script>.py [extra args...]
+#   cd hpc/slurm && sbatch run_example_gpu.sh examples/<script>.py [extra args...]
 #
 # Extra args are forwarded to the Python script. --device cuda is added
 # automatically unless the command already includes --device.
@@ -17,7 +18,16 @@
 set -euo pipefail
 
 if [[ -n "${SLURM_SUBMIT_DIR:-}" ]]; then
-  source "${SLURM_SUBMIT_DIR}/hpc/slurm/_gpu_env.sh"
+  if [[ -f "${SLURM_SUBMIT_DIR}/hpc/slurm/_gpu_env.sh" ]]; then
+    # Submitted from repository root.
+    source "${SLURM_SUBMIT_DIR}/hpc/slurm/_gpu_env.sh"
+  elif [[ -f "${SLURM_SUBMIT_DIR}/_gpu_env.sh" ]]; then
+    # Submitted from hpc/slurm/.
+    source "${SLURM_SUBMIT_DIR}/_gpu_env.sh"
+  else
+    echo "Could not find _gpu_env.sh under SLURM_SUBMIT_DIR=${SLURM_SUBMIT_DIR}" >&2
+    exit 1
+  fi
 else
   source "$(cd "$(dirname "$0")" && pwd)/_gpu_env.sh"
 fi
