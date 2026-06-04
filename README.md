@@ -116,7 +116,7 @@ python examples/xray_focusing_testing_partial_coherence.py
 
 `xray_focusing_testing.py` writes `fig1d_xray_focusing_testing_params_{timestamp}.npy` and `fig1d_xray_focusing_testing_results_{timestamp}.npz` for `fig1d_focal_spot_comparison.ipynb`.
 
-These scripts are useful for verifying your installation or experimenting with parameters outside of the full sweep pipeline. On a GPU, each completes in a few minutes; a SLURM launcher is available at `hpc/slurm/run_example_gpu.sh`.
+These scripts are useful for verifying your installation or experimenting with parameters outside of the full sweep pipeline. On a GPU, each completes in a few minutes. For batch jobs on a SLURM cluster, use `hpc/slurm/run_example_gpu.sh` (see [SLURM (GPU cluster jobs)](#slurm-gpu-cluster-jobs)).
 
 ### Console output
 
@@ -151,19 +151,98 @@ Robustness scripts read a completed `fig1_N_sweeps` run and write figure-prefixe
 | `paper/postprocess/thermal_robustness.py` | `fig3d_thermal_robustness_results` |
 | `paper/postprocess/sidewall_robustness.py` | `figA4b_sidewall_robustness_results` |
 
-Defaults are set to the manuscript `fig1_N_sweeps` run ID, but you can pass your own:
+By default, scripts read the bundled `paper_data/` files (`fig1_N_sweeps_params.npy`, `fig1_N_sweeps_sweep_arrays.npy`, `fig1_N_sweeps_results_run_0.npz`). After re-running the `n_sweeps` study, pass `--base-id <timestamp>` to use timestamped filenames instead:
 
 ```bash
 python paper/postprocess/placement_robustness.py --base-id <FIG1_N_SWEEP_ID> --run-id 0 --data-dir paper_data
 ```
 
-## SLURM
+## SLURM (GPU cluster jobs)
 
-Cluster launchers are in `hpc/slurm/`:
+The `hpc/slurm/` directory contains SLURM batch scripts for MIT-style clusters (Volta GPUs, Lmod modules). They are written to be submitted with `sbatch` from the **repository root**; you can also `cd hpc/slurm` and submit from there. Job stdout/stderr are written under `logs/slurm/` (created automatically; this directory is gitignored).
+
+Before your first submission, open `hpc/slurm/_gpu_env.sh` and adjust the `module load` line (and any other site-specific setup) so the job sees Python 3.11+, PyTorch with CUDA, and this repo’s dependencies. The default module name is site-specific and will not exist on every cluster.
+
+Edit the `#SBATCH` lines at the top of `run_sweep.sh`, `run_example_gpu.sh`, or `run_gpu_python.sh` if you need a different partition, GPU type, CPU count, or wall time.
+
+### Files in `hpc/slurm/`
+
+| File | Submit with `sbatch`? | Role |
+|------|----------------------|------|
+| `_gpu_env.sh` | No | Shared setup sourced by the launchers: `cd` to repo root, load Python/CUDA environment, create `logs/slurm/`. |
+| `run_example_gpu.sh` | Yes | Single-GPU jobs for scripts in `examples/`. |
+| `run_sweep.sh` | Yes | Multi-GPU jobs for full paper optimization sweeps via `paper/sweeps/run_sweep.py`. |
+| `run_gpu_python.sh` | Yes | Generic GPU launcher for repository Python scripts (including `paper/postprocess/*.py`). |
+
+SLURM copies submitted scripts into its spool directory, so the launchers **source** `_gpu_env.sh` by path under `SLURM_SUBMIT_DIR` rather than relying on `$0`. Do not run `_gpu_env.sh` as a standalone job.
+
+### When to use which launcher
+
+**`run_example_gpu.sh`** — short, single-optimization runs:
+
+- Smoke-test the install after `pip install -r requirements.txt`.
+- Regenerate Fig. 1(d) data (`examples/xray_focusing_testing.py` or `examples/xray_focusing_testing_partial_coherence.py`).
+- Try parameter changes without launching a full parameter grid.
+
+Default resources: **1** Volta GPU, **8** tasks (`#SBATCH --gres=gpu:volta:1`, `#SBATCH -n 8`). The script appends `--device cuda` unless you already pass `--device`.
 
 ```bash
-sbatch hpc/slurm/run_sweep.sh n_sweeps --save-dir paper_data
+# From repository root (recommended)
+sbatch hpc/slurm/run_example_gpu.sh examples/xray_focusing_testing.py
+sbatch hpc/slurm/run_example_gpu.sh examples/xray_focusing_testing_partial_coherence.py
+
+# Optional args are forwarded to the Python script
+sbatch hpc/slurm/run_example_gpu.sh examples/xray_focusing_testing.py --device cuda:0
 ```
+
+**`run_sweep.sh`** — manuscript-scale sweeps (many optimizations over a study grid):
+
+- Regenerate sweep data for notebooks when bypassing `paper/reproduce.py` on the login node.
+- Run one study at a time as a long GPU batch job (same studies as `python paper/reproduce.py run <target_key>`, but keyed by **study name**, not `fig*` target keys).
+
+Default resources: **2** Volta GPUs, **40** tasks (`#SBATCH --gres=gpu:volta:2`, `#SBATCH -n 40`). The sweep runner defaults to **2 workers per GPU** (`run_sweep.py --workers-per-gpu 2`), so two GPUs typically run four parallel optimizations unless you override it.
+
+List available study keys:
+
+```bash
+python paper/sweeps/run_sweep.py --list-studies
+```
+
+Submit a study (first argument is required; remaining arguments are passed through to `run_sweep.py`):
+
+```bash
+export DIFFRACTIVE_CASCADES_DATA_DIR=paper_data   # optional; or pass --save-dir
+
+sbatch hpc/slurm/run_sweep.sh n_sweeps --save-dir paper_data
+sbatch hpc/slurm/run_sweep.sh bandwidth_energy --save-dir paper_data
+sbatch hpc/slurm/run_sweep.sh thickness_energy_fig2a --save-dir paper_data --workers-per-gpu 2 --max-workers 4
+```
+
+Study keys align with the [re-running optimizations](#re-running-optimizations-data-generation) section, for example `n_sweeps` (Fig. 1e/c), `bandwidth_energy` and `thickness_energy_fig2a` (Fig. 2a), `nelem_min_feature` (Fig. 2b), `thickness_energy_main` (Fig. 2c), `coherence_illumination` (Fig. A.1), `focal_length` / `inter_element_distance` (Fig. A.3).
+
+**`run_gpu_python.sh`** — generic launcher for robustness/postprocess and other repository Python scripts:
+
+- Run robustness scripts on GPU with sweep-like `sbatch ... <script.py> [args...]` usage.
+- Pass either a full repository-relative path or just a basename (the launcher resolves common locations like `paper/postprocess/`).
+
+```bash
+# Full path (explicit)
+sbatch hpc/slurm/run_gpu_python.sh paper/postprocess/placement_robustness.py --base-id <FIG1_N_SWEEP_ID> --run-id 0 --data-dir paper_data
+
+# Basename shorthand (resolved to paper/postprocess/placement_robustness.py)
+sbatch hpc/slurm/run_gpu_python.sh placement_robustness.py --base-id <FIG1_N_SWEEP_ID> --run-id 0 --data-dir paper_data
+```
+
+`paper/reproduce.py` remains best for single-command orchestration, but `run_gpu_python.sh` is now the simplest direct `sbatch` path for standalone postprocess scripts.
+
+### Monitoring jobs
+
+```bash
+squeue -u "$USER"
+tail -f logs/slurm/<job-name>-<jobid>.out
+```
+
+After a sweep finishes, point the matching notebook at the new timestamp in the saved `fig*_*_{timestamp}` filenames (or set `DIFFRACTIVE_CASCADES_DATA_DIR` and update the notebook `ID` as described above).
 
 ## Citation
 

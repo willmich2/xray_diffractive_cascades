@@ -11,7 +11,7 @@ from src import console
 
 
 DEFAULT_DATA_DIR = os.environ.get("DIFFRACTIVE_CASCADES_DATA_DIR", "paper_data")
-DEFAULT_ROBUSTNESS_BASE_ID = "20260223_220525"
+DEFAULT_ROBUSTNESS_BASE_ID: str | None = None
 DEFAULT_ROBUSTNESS_RUN_ID = 0
 
 
@@ -155,7 +155,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--workers-per-gpu", type=int, default=None)
     parser.add_argument("--max-workers", type=int, default=None)
     parser.add_argument("--n-runs", type=int, default=None)
-    parser.add_argument("--base-n-sweep-id", default=DEFAULT_ROBUSTNESS_BASE_ID)
+    parser.add_argument(
+        "--base-n-sweep-id",
+        default=DEFAULT_ROBUSTNESS_BASE_ID,
+        help="fig1_N_sweeps timestamp for postprocess inputs; omit for bundled paper_data/ files.",
+    )
     parser.add_argument("--n-sweep-run-id", type=int, default=DEFAULT_ROBUSTNESS_RUN_ID)
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
@@ -189,7 +193,9 @@ def _build_command(target: Target, args: argparse.Namespace) -> list[str]:
 
     cmd = [sys.executable, target.value]
     if "postprocess" in target.value:
-        cmd += ["--base-id", args.base_n_sweep_id, "--run-id", str(args.n_sweep_run_id)]
+        if args.base_n_sweep_id:
+            cmd += ["--base-id", args.base_n_sweep_id]
+        cmd += ["--run-id", str(args.n_sweep_run_id)]
         if args.workers_per_gpu is not None:
             cmd += ["--workers-per-gpu", str(args.workers_per_gpu)]
         if args.data_dir:

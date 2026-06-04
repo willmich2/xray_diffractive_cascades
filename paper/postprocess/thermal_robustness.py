@@ -20,14 +20,18 @@ from src.util import (  # type: ignore
 from src.simparams import SimParams  # type: ignore
 from src.forwardmodels import forward_model_N_elements_mask, forward_model_N_elements_mask_2d  # type: ignore
 from src.inversedesign_utils import zp_init  # type: ignore
+from paper.postprocess.fig1_inputs import (
+    DEFAULT_BASE_SWEEP_ID,
+    DEFAULT_DATA_DIR,
+    output_id_label,
+    resolve_fig1_n_sweep_paths,
+    robustness_results_path,
+)
 from paper.sweeps.density_io import density_half_profile, load_opt_rhos
 from src import console
 
 _LOG = "thermal_robustness"
 
-
-DEFAULT_BASE_SWEEP_ID = "20260223_220525"
-DEFAULT_DATA_DIR = os.environ.get("DIFFRACTIVE_CASCADES_DATA_DIR", "outputs")
 DEFAULT_WORKERS_PER_GPU = int(os.environ.get("MAX_WORKERS", "3"))
 
 _worker_gpu_id = None
@@ -45,9 +49,14 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--base-id",
         default=DEFAULT_BASE_SWEEP_ID,
-        help="Timestamp ID used for fig1_N_sweeps_* files (without run suffix).",
+        help="Timestamp for fig1_N_sweeps_* inputs; omit for bundled paper_data/ (no timestamp suffix).",
     )
-    parser.add_argument("--run-id", type=int, default=0, help="Run index from fig1_N_sweeps_results_<ID>_run_<run_id>.npz")
+    parser.add_argument(
+        "--run-id",
+        type=int,
+        default=0,
+        help="Run index (fig1_N_sweeps_results_run_<run_id>.npz or fig1_N_sweeps_results_<ID>_run_<run_id>.npz).",
+    )
     parser.add_argument("--data-dir", default=DEFAULT_DATA_DIR, help="Directory containing sweep/result files.")
     parser.add_argument("--workers-per-gpu", type=int, default=DEFAULT_WORKERS_PER_GPU)
     return parser.parse_args()
@@ -286,9 +295,12 @@ if __name__ == "__main__":
 
     console.runtime_pool(_LOG, n_gpus=n_gpus, workers_per_gpu=workers_per_gpu, max_workers=max_workers)
 
-    results_path = f"{args.data_dir}/fig1_N_sweeps_results_{args.base_id}_run_{args.run_id}.npz"
-    params_path = f"{args.data_dir}/fig1_N_sweeps_params_{args.base_id}.npy"
-    sweep_arrays_path = f"{args.data_dir}/fig1_N_sweeps_sweep_arrays_{args.base_id}.npy"
+    results_path, params_path, sweep_arrays_path = resolve_fig1_n_sweep_paths(
+        args.data_dir, args.run_id, args.base_id
+    )
+    results_path = str(results_path)
+    params_path = str(params_path)
+    sweep_arrays_path = str(sweep_arrays_path)
     console.file_load(_LOG, results_path, label="input results")
     console.file_load(_LOG, params_path, label="input params")
     console.file_load(_LOG, sweep_arrays_path, label="input sweep arrays")
@@ -353,7 +365,9 @@ if __name__ == "__main__":
                 )
 
     save_time = get_formatted_datetime()
-    save_path = f"{args.data_dir}/fig3d_thermal_robustness_results_{args.base_id}_{save_time}.npz"
+    save_path = str(
+        robustness_results_path(args.data_dir, "fig3d_thermal_robustness_results", args.base_id, save_time)
+    )
     np.savez(
         save_path,
         fzp_mean_efficiencies=fzp_mean_efficiencies,
@@ -365,7 +379,7 @@ if __name__ == "__main__":
         choices=np.array(choices, dtype=np.int64),
         temps=temps,
         Nelem_arr=np.array(Nelem_arr, dtype=np.int64),
-        ID=np.array([args.base_id]),
+        ID=np.array([output_id_label(args.base_id)]),
     )
     console.file_saved(_LOG, save_path)
     console.script_done(_LOG, start_time)
