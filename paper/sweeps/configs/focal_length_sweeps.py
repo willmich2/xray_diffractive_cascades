@@ -2,7 +2,7 @@ import numpy as np
 
 from paper.sweeps.standard_params import NX_DEFAULT
 
-SAVE_PREFIX = "focal_length_sweeps"
+SAVE_PREFIX = "figA3a_focal_length_sweeps"
 SAVE_DIR = None
 N_RUNS = 1
 SAVE_RUN_SUFFIX = True

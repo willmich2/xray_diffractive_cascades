@@ -32,13 +32,13 @@ _sweep_arrs = None
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Evaluate placement robustness from an N_sweeps run.")
+    parser = argparse.ArgumentParser(description="Evaluate placement robustness from a fig1_N_sweeps run.")
     parser.add_argument(
         "--base-id",
         default=DEFAULT_BASE_SWEEP_ID,
-        help="Timestamp ID used for N_sweeps_* files (without run suffix).",
+        help="Timestamp ID used for fig1_N_sweeps_* files (without run suffix).",
     )
-    parser.add_argument("--run-id", type=int, default=0, help="Run index from N_sweeps_results_<ID>_run_<run_id>.npz")
+    parser.add_argument("--run-id", type=int, default=0, help="Run index from fig1_N_sweeps_results_<ID>_run_<run_id>.npz")
     parser.add_argument("--data-dir", default=DEFAULT_DATA_DIR, help="Directory containing sweep/result files.")
     parser.add_argument("--workers-per-gpu", type=int, default=DEFAULT_WORKERS_PER_GPU)
     return parser.parse_args()
@@ -264,9 +264,9 @@ if __name__ == "__main__":
         flush=True,
     )
 
-    results_path = f"{args.data_dir}/N_sweeps_results_{args.base_id}_run_{args.run_id}.npz"
-    params_path = f"{args.data_dir}/N_sweeps_params_{args.base_id}.npy"
-    sweep_arrays_path = f"{args.data_dir}/N_sweeps_sweep_arrays_{args.base_id}.npy"
+    results_path = f"{args.data_dir}/fig1_N_sweeps_results_{args.base_id}_run_{args.run_id}.npz"
+    params_path = f"{args.data_dir}/fig1_N_sweeps_params_{args.base_id}.npy"
+    sweep_arrays_path = f"{args.data_dir}/fig1_N_sweeps_sweep_arrays_{args.base_id}.npy"
 
     # Load lightweight sweep arrays in main (worker processes load once via initializer)
     sweep_arrs_main = np.load(sweep_arrays_path, allow_pickle=True).item()
@@ -318,7 +318,7 @@ if __name__ == "__main__":
                 print(f"  completed {completed}/{total} tasks", flush=True)
 
     save_time = get_formatted_datetime()
-    save_path = f"{args.data_dir}/placement_robustness_results_{args.base_id}_{save_time}.npz"
+    save_path = f"{args.data_dir}/fig3d_placement_robustness_results_{args.base_id}_{save_time}.npz"
     np.savez(
         save_path,
         fzp_mean_efficiencies=fzp_mean_efficiencies,

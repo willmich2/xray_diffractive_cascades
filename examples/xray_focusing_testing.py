@@ -217,14 +217,14 @@ if __name__ == "__main__":
             "morph_agg_beta": float(morph_agg_beta),
         },
     }
-    np.save(f"{save_dir}/xray_focusing_testing_params_{save_time}.npy", params_dict)
+    np.save(f"{save_dir}/fig1d_xray_focusing_testing_params_{save_time}.npy", params_dict)
     
     # Save mask and z_dists
     mask_save = mask.cpu().numpy()
     z_dists_save = z_dists.cpu().numpy()
     
     np.savez(
-        f"{save_dir}/xray_focusing_testing_results_{save_time}.npz",
+        f"{save_dir}/fig1d_xray_focusing_testing_results_{save_time}.npz",
         opt_intensity=opt_intensity_1d,
         opt_efficiency=float(opt_efficiency),
         opt_obj=float(opt_final_obj),

@@ -20,7 +20,7 @@ PAPER_SWEEP_STUDIES: tuple[SweepStudy, ...] = (
         config_module="paper.sweeps.configs.n_sweeps",
         manuscript_result="Fig. 1(e) and Fig. 1(c) element visualizations",
         description="Material and cascade-depth scaling",
-        notebooks=("notebooks/Nelem_sweep.ipynb", "notebooks/element_visualization.ipynb"),
+        notebooks=("notebooks/fig1e_Nelem_sweep.ipynb", "notebooks/fig1c_element_visualization.ipynb"),
         aliases=("n", "nelem"),
     ),
     SweepStudy(
@@ -28,7 +28,7 @@ PAPER_SWEEP_STUDIES: tuple[SweepStudy, ...] = (
         config_module="paper.sweeps.configs.bandwidth_energy_sweep",
         manuscript_result="Fig. 2(a) bandwidth-energy panel",
         description="Bandwidth vs energy map",
-        notebooks=("notebooks/energy_bw_ar.ipynb",),
+        notebooks=("notebooks/fig2a_energy_bandwidth_aspect_ratio.ipynb",),
         aliases=("bandwidth", "bw"),
     ),
     SweepStudy(
@@ -36,15 +36,15 @@ PAPER_SWEEP_STUDIES: tuple[SweepStudy, ...] = (
         config_module="paper.sweeps.configs.thickness_energy_sweep",
         manuscript_result="Fig. 2(c) aspect-ratio scaling",
         description="Thickness-energy sweep used for aspect-ratio scaling",
-        notebooks=("notebooks/aspect_ratio_scaling.ipynb",),
+        notebooks=("notebooks/fig2c_aspect_ratio_scaling.ipynb",),
         aliases=("thickness", "aspect_ratio"),
     ),
     SweepStudy(
         key="thickness_energy_fig2a",
-        config_module="paper.sweeps.configs.thickness_energy_sweep_fig2a",
+        config_module="paper.sweeps.configs.fig2a_thickness_energy_sweep",
         manuscript_result="Fig. 2(a) aspect-ratio/energy panel",
         description="Thickness-energy sweep on 30x30 grid for Fig. 2(a)",
-        notebooks=("notebooks/energy_bw_ar.ipynb",),
+        notebooks=("notebooks/fig2a_energy_bandwidth_aspect_ratio.ipynb",),
         aliases=("thickness_energy_dense", "thickness_fig2a"),
     ),
     SweepStudy(
@@ -52,7 +52,7 @@ PAPER_SWEEP_STUDIES: tuple[SweepStudy, ...] = (
         config_module="paper.sweeps.configs.nelem_min_feature_sweep",
         manuscript_result="Fig. 2(b)",
         description="Spot-size vs efficiency tradeoff",
-        notebooks=("notebooks/mfs_sweep.ipynb",),
+        notebooks=("notebooks/fig2b_mfs_sweep.ipynb",),
         aliases=("mfs", "min_feature"),
     ),
     SweepStudy(
@@ -60,7 +60,7 @@ PAPER_SWEEP_STUDIES: tuple[SweepStudy, ...] = (
         config_module="paper.sweeps.configs.coherence_illumination_sweep",
         manuscript_result="Appendix B, Fig. A.1",
         description="Partial spatial coherence sweep",
-        notebooks=("notebooks/partial_coherence.ipynb",),
+        notebooks=("notebooks/figA1_partial_coherence.ipynb",),
         aliases=("coherence",),
     ),
     SweepStudy(
@@ -68,7 +68,7 @@ PAPER_SWEEP_STUDIES: tuple[SweepStudy, ...] = (
         config_module="paper.sweeps.configs.focal_length_sweeps",
         manuscript_result="Appendix D, Fig. A.3(a)",
         description="Focal-length scaling",
-        notebooks=("notebooks/focal_length.ipynb",),
+        notebooks=("notebooks/figA3a_focal_length.ipynb",),
         aliases=("focal",),
     ),
     SweepStudy(
@@ -76,7 +76,7 @@ PAPER_SWEEP_STUDIES: tuple[SweepStudy, ...] = (
         config_module="paper.sweeps.configs.inter_elem_dist_sweeps",
         manuscript_result="Appendix D, Fig. A.3(b)",
         description="Inter-element spacing scaling",
-        notebooks=("notebooks/inter_elem_dist.ipynb",),
+        notebooks=("notebooks/figA3b_inter_elem_dist.ipynb",),
         aliases=("inter_elem_dist", "inter_elem"),
     ),
 )

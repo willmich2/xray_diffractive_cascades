@@ -2,7 +2,7 @@ import numpy as np
 
 from paper.sweeps.standard_params import NX_DEFAULT
 
-SAVE_PREFIX = "Nelem_min_feature_sweep"
+SAVE_PREFIX = "fig2b_Nelem_min_feature_sweep"
 SAVE_DIR = None
 N_RUNS = 3
 SWEEP_AXES = {

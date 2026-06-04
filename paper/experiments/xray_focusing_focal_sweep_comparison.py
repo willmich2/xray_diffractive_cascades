@@ -390,7 +390,7 @@ if __name__ == "__main__":
             "morph_agg_beta": float(morph_agg_beta),
         },
     }
-    np.save(f"{save_dir}/xray_focusing_focal_sweep_comparison_params_{save_time}.npy", params_dict)
+    np.save(f"{save_dir}/fig4b_xray_focusing_focal_sweep_comparison_params_{save_time}.npy", params_dict)
 
     # ----- Save results -----
     z_distances_run1_np = z_single.cpu().numpy()
@@ -398,7 +398,7 @@ if __name__ == "__main__":
     mask_save = focusing_mask.cpu().numpy()
 
     np.savez(
-        f"{save_dir}/xray_focusing_focal_sweep_comparison_results_{save_time}.npz",
+        f"{save_dir}/fig4b_xray_focusing_focal_sweep_comparison_results_{save_time}.npz",
         opt_intensity=opt_intensity_run1_center,
         opt_efficiency=float(opt_efficiency_run1),
         opt_obj=float(opt_final_obj_run1),

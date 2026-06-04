@@ -2,7 +2,7 @@ import numpy as np
 
 from paper.sweeps.standard_params import NX_DEFAULT
 
-SAVE_PREFIX = "N_sweeps"
+SAVE_PREFIX = "fig1_N_sweeps"
 SAVE_DIR = None
 N_RUNS = 5
 SWEEP_AXES = {

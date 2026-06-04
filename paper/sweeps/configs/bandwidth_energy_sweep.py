@@ -2,7 +2,7 @@ import numpy as np
 
 from paper.sweeps.standard_params import N_ELEMENTS_DEFAULT, NX_DEFAULT
 
-SAVE_PREFIX = "bandwidth_energy_sweep"
+SAVE_PREFIX = "fig2a_bandwidth_energy_sweep"
 SAVE_DIR = None
 N_RUNS = 1
 SAVE_RUN_SUFFIX = False

@@ -65,22 +65,22 @@ python paper/reproduce.py run fig1e --data-dir paper_data --workers-per-gpu 2 --
 
 ### Main-text targets
 
-- `fig1e` (`notebooks/Nelem_sweep.ipynb`): material/depth scaling (`N_sweeps`).
-- `fig1c` (`notebooks/element_visualization.ipynb`): element visualizations from the same `N_sweeps` run.
-- `fig2a_bandwidth` (`notebooks/energy_bw_ar.ipynb`): bandwidth-energy sweep.
-- `fig2a_thickness` (`notebooks/energy_bw_ar.ipynb`): thickness-energy sweep on the 30x30 Fig. 2(a) grid.
-- `fig2b` (`notebooks/mfs_sweep.ipynb`): minimum-feature-size tradeoff sweep.
-- `fig2c` (`notebooks/aspect_ratio_scaling.ipynb`): thickness-energy sweep for aspect-ratio scaling.
-- `fig3_placement`, `fig3_erosion_dilation`, `fig3_thermal`, `figA4_sidewall` (`notebooks/robustness.ipynb`): robustness postprocessing.
-- `fig4b` (`notebooks/depth_of_focus.ipynb`): depth-of-focus experiment.
+- `fig1e` (`notebooks/fig1e_Nelem_sweep.ipynb`): material/depth scaling (`fig1_N_sweeps`).
+- `fig1c` (`notebooks/fig1c_element_visualization.ipynb`): element visualizations from the same `fig1_N_sweeps` run.
+- `fig2a_bandwidth` (`notebooks/fig2a_energy_bandwidth_aspect_ratio.ipynb`): bandwidth-energy sweep.
+- `fig2a_thickness` (`notebooks/fig2a_energy_bandwidth_aspect_ratio.ipynb`): thickness-energy sweep on the 30x30 Fig. 2(a) grid.
+- `fig2b` (`notebooks/fig2b_mfs_sweep.ipynb`): minimum-feature-size tradeoff sweep.
+- `fig2c` (`notebooks/fig2c_aspect_ratio_scaling.ipynb`): thickness-energy sweep for aspect-ratio scaling.
+- `fig3_placement`, `fig3_erosion_dilation`, `fig3_thermal`, `figA4_sidewall` (`notebooks/fig3d_robustness.ipynb`): robustness postprocessing.
+- `fig4b` (`notebooks/fig4b_depth_of_focus.ipynb`): depth-of-focus experiment.
 
-`notebooks/focal_spot_comparison.ipynb` (Fig. 1 focal spot profile) uses data from `examples/xray_focusing_testing.py` and can be run directly from the included `paper_data/` without a separate reproduce target.
+`notebooks/fig1d_focal_spot_comparison.ipynb` (Fig. 1(d) focal spot profile) uses data from `examples/xray_focusing_testing.py` and can be run directly from the included `paper_data/` without a separate reproduce target.
 
 ### Appendix targets
 
-- `figA1` (`notebooks/partial_coherence.ipynb`): partial coherence sweep.
-- `figA3_focal` (`notebooks/focal_length.ipynb`): focal-length sweep.
-- `figA3_inter` (`notebooks/inter_elem_dist.ipynb`): inter-element-distance sweep.
+- `figA1` (`notebooks/figA1_partial_coherence.ipynb`): partial coherence sweep.
+- `figA3_focal` (`notebooks/figA3a_focal_length.ipynb`): focal-length sweep.
+- `figA3_inter` (`notebooks/figA3b_inter_elem_dist.ipynb`): inter-element-distance sweep.
 
 Notebook cells near the top define dataset IDs (timestamp strings). The defaults point to the included pre-generated data. If you re-run an optimization sweep, update the `ID` variable in the corresponding notebook to the new timestamp so it loads your fresh outputs.
 
@@ -108,10 +108,10 @@ Each sweep runs a batch of optimizations over a parameter grid and saves the res
 
 ## Robustness Postprocessing Notes
 
-Robustness scripts consume an existing `N_sweeps` run ID. Defaults are set to the manuscript ID, but you can pass your own:
+Robustness scripts consume an existing `fig1_N_sweeps` run ID. Defaults are set to the manuscript ID, but you can pass your own:
 
 ```bash
-python paper/postprocess/placement_robustness.py --base-id <N_SWEEP_ID> --run-id 0 --data-dir paper_data
+python paper/postprocess/placement_robustness.py --base-id <FIG1_N_SWEEP_ID> --run-id 0 --data-dir paper_data
 ```
 
 Equivalent arguments exist for:
