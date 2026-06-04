@@ -21,6 +21,7 @@ from src.forwardmodels import (
 )
 from src.inversedesign_utils import zp_init
 from src.optimizer import run_torch_optimization
+from paper.sweeps.density_io import pack_binary_density
 from paper.sweeps.standard_params import (
     MATERIAL_DEFAULT,
     MATERIAL_MAP_AU,
@@ -397,17 +398,17 @@ if __name__ == "__main__":
     z_distances_set_run2_np = np.stack([z.cpu().numpy() for z in z_distances_set_run2])
     mask_save = focusing_mask.cpu().numpy()
 
-    np.savez(
+    np.savez_compressed(
         f"{save_dir}/fig4b_xray_focusing_focal_sweep_comparison_results_{save_time}.npz",
         opt_intensity=opt_intensity_run1_center,
         opt_efficiency=float(opt_efficiency_run1),
         opt_obj=float(opt_final_obj_run1),
         opt_width=float(opt_width_run1),
-        rho_bar=rho_bar_run1.cpu().numpy(),
+        rho_bar=pack_binary_density(rho_bar_run1.detach().cpu().numpy()),
         obj_list=obj_list_run1_np,
         z_distances_run1=z_distances_run1_np,
         opt_intensity_run2_center=opt_intensity_run2_center,
-        rho_bar_run2=rho_bar_run2.cpu().numpy(),
+        rho_bar_run2=pack_binary_density(rho_bar_run2.detach().cpu().numpy()),
         obj_list_run2=obj_list_run2_np,
         z_distances_set_run2=z_distances_set_run2_np,
         opt_obj_run2=float(opt_final_obj_run2),

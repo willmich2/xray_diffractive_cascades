@@ -127,7 +127,7 @@ python paper/sweeps/run_sweep.py --list-studies
 python paper/sweeps/run_sweep.py --study n_sweeps --save-dir paper_data
 ```
 
-Study keys (`n_sweeps`, `bandwidth_energy`, `thickness_energy_fig2a`, etc.) map to the `fig*` save prefixes above. Each sweep runs a batch of optimizations over a parameter grid and saves the results with notebook-compatible axis naming and output schema.
+Study keys (`n_sweeps`, `bandwidth_energy`, `thickness_energy_fig2a`, etc.) map to the `fig*` save prefixes above. Each sweep runs a batch of optimizations over a parameter grid and saves the results with notebook-compatible axis naming and output schema. Projected element densities (`opt_rhos`) are stored as compressed `bool` arrays (binary solid/void); legacy `float64` files are still accepted by notebooks and postprocessing.
 
 ## Robustness Postprocessing Notes
 

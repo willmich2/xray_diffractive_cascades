@@ -20,6 +20,7 @@ from src.util import (  # type: ignore
 from src.simparams import SimParams  # type: ignore
 from src.forwardmodels import forward_model_N_elements_mask_2d  # type: ignore
 from src.inversedesign_utils import zp_init  # type: ignore
+from paper.sweeps.density_io import density_half_profile, load_opt_rhos
 
 
 # Set this to an existing `fig1_N_sweeps` run ID (timestamp string).
@@ -65,7 +66,7 @@ def _init_worker(gpu_queue, results_path: str, params_path: str, sweep_arrays_pa
     # IMPORTANT: do not keep NpzFile handles around (they are not picklable and
     # can hold open BufferedReader file descriptors); read arrays then close.
     with np.load(results_path, allow_pickle=True) as results_np:
-        _opt_rhos = results_np["opt_rhos"]
+        _opt_rhos = load_opt_rhos(results_np["opt_rhos"])
     _params = np.load(params_path, allow_pickle=True).item()
     _sweep_arrs = np.load(sweep_arrays_path, allow_pickle=True).item()
 
@@ -190,7 +191,7 @@ def worker(task):
     seg_len = Nx // 2
 
     # Convert once to numpy so morphological ops are purely CPU/scipy.
-    opt_x_base_np = np.asarray(rhos[ch][: int(Nelem * seg_len)], dtype=np.float64)
+    opt_x_base_np = density_half_profile(rhos, ch, int(Nelem * seg_len))
 
     fzp_mean_efficiencies = np.zeros((N_trials,), dtype=float)
     opt_mean_efficiencies = np.zeros((N_trials,), dtype=float)

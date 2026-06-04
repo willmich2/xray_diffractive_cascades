@@ -22,6 +22,7 @@ from src.forwardmodels import (
 )
 from src.inversedesign_utils import zp_init
 from src.optimizer import run_torch_optimization
+from paper.sweeps.density_io import pack_binary_density
 from paper.sweeps.standard_params import (
     MATERIAL_DEFAULT,
     MATERIAL_MAP,
@@ -279,7 +280,7 @@ if __name__ == "__main__":
     mask_save = mask.cpu().numpy()
     z_dists_save = z_dists.cpu().numpy()
 
-    np.savez(
+    np.savez_compressed(
         f"{save_dir}/xray_focusing_partial_coherence_results_{save_time}.npz",
         opt_intensity_pc=opt_I_pc_np,
         opt_intensity_coh=opt_I_coh_np,
@@ -289,7 +290,7 @@ if __name__ == "__main__":
         opt_obj_coh=opt_obj_coh_val,
         opt_width_pc=float(opt_width_pc),
         opt_width_coh=float(opt_width_coh),
-        rho_bar=rho_bar.cpu().numpy(),
+        rho_bar=pack_binary_density(rho_bar.detach().cpu().numpy()),
         fzp_intensity_pc=fzp_I_pc_np,
         fzp_intensity_coh=fzp_I_coh_np,
         fzp_efficiency_pc=float(fzp_eff_pc),

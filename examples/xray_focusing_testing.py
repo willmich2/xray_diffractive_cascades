@@ -16,6 +16,7 @@ from src.simparams import SimParams
 from src.forwardmodels import forward_model_N_elements_mask, forward_model_N_elements_mask_2d
 from src.inversedesign_utils import zp_init
 from src.optimizer import run_torch_optimization
+from paper.sweeps.density_io import pack_binary_density
 from paper.sweeps.standard_params import (
     MATERIAL_DEFAULT,
     MATERIAL_MAP,
@@ -223,13 +224,13 @@ if __name__ == "__main__":
     mask_save = mask.cpu().numpy()
     z_dists_save = z_dists.cpu().numpy()
     
-    np.savez(
+    np.savez_compressed(
         f"{save_dir}/fig1d_xray_focusing_testing_results_{save_time}.npz",
         opt_intensity=opt_intensity_1d,
         opt_efficiency=float(opt_efficiency),
         opt_obj=float(opt_final_obj),
         opt_width=float(opt_width),
-        rho_bar=rho_bar.cpu().numpy(),
+        rho_bar=pack_binary_density(rho_bar.detach().cpu().numpy()),
         fzp_intensity=fzp_intensity_1d,
         fzp_efficiency=float(fzp_efficiency),
         fzp_obj=float(fzp_final_obj),

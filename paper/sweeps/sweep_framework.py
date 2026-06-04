@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from paper.sweeps.density_io import pack_binary_density, save_sweep_results
 from src.util import get_formatted_datetime
 
 
@@ -278,7 +279,7 @@ def _default_worker(task: dict[str, Any]) -> dict[str, Any]:
         "index": tuple(task["index"]),
         "task_id": int(task["task_id"]),
         "result": {
-            "rho_bar": rho_bar.detach().cpu().numpy(),
+            "rho_bar": pack_binary_density(rho_bar.detach().cpu().numpy()),
             "obj_list": obj_np,
             "opt_obj": float(metrics["opt_final_obj"]),
             "opt_eff": float(metrics["opt_efficiency"]),
@@ -338,7 +339,10 @@ def _collect_results(results: list[dict[str, Any]], axes: dict[str, Any], config
     max_params = int(config.get("MAX_PARAMS", 0))
     nx_store = int(config.get("NX_STORE", 0))
     out = {
-        "opt_rhos": np.zeros(shape + ((max_params,) if max_params > 0 else (1,))),
+        "opt_rhos": np.zeros(
+            shape + ((max_params,) if max_params > 0 else (1,)),
+            dtype=np.bool_,
+        ),
         "obj_lists": np.empty(shape, dtype=object),
         "opt_objs": np.full(shape, np.nan),
         "opt_efficiencies": np.full(shape, np.nan),
@@ -359,9 +363,9 @@ def _collect_results(results: list[dict[str, Any]], axes: dict[str, Any], config
             failed.append(item)
             continue
         r = item["result"]
-        rho = np.asarray(r["rho_bar"])
+        rho = pack_binary_density(r["rho_bar"])
         if max_params > 0 and rho.shape[0] < max_params:
-            rho = np.pad(rho, (0, max_params - int(rho.shape[0])), mode="constant")
+            rho = np.pad(rho, (0, max_params - int(rho.shape[0])), mode="constant", constant_values=False)
         out["opt_rhos"][idx] = rho if max_params > 0 else rho[:1]
         out["obj_lists"][idx] = r["obj_list"]
         out["opt_objs"][idx] = r["opt_obj"]
@@ -455,7 +459,7 @@ def run_sweep(runtime: SweepRuntimeConfig) -> None:
             result_path = f"{save_dir}/{save_prefix}_results_{save_time}_run_{run_id}.npz"
         else:
             result_path = f"{save_dir}/{save_prefix}_results_{save_time}.npz"
-        np.savez(result_path, **arrays)
+        save_sweep_results(result_path, arrays)
         print(
             f"Run {run_id + 1}/{n_runs} complete for {save_prefix} in {((time.time() - start)/60):.2f} min",
             flush=True,

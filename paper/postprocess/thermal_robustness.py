@@ -20,6 +20,7 @@ from src.util import (  # type: ignore
 from src.simparams import SimParams  # type: ignore
 from src.forwardmodels import forward_model_N_elements_mask, forward_model_N_elements_mask_2d  # type: ignore
 from src.inversedesign_utils import zp_init  # type: ignore
+from paper.sweeps.density_io import density_half_profile, load_opt_rhos
 
 
 DEFAULT_BASE_SWEEP_ID = "20260223_220525"
@@ -58,7 +59,7 @@ def _init_worker(gpu_queue, results_path: str, params_path: str, sweep_arrays_pa
     # IMPORTANT: do not keep NpzFile handles around (they are not picklable and
     # can hold open BufferedReader file descriptors); read arrays then close.
     with np.load(results_path, allow_pickle=True) as results_np:
-        _opt_rhos = results_np["opt_rhos"]
+        _opt_rhos = load_opt_rhos(results_np["opt_rhos"])
     _params = np.load(params_path, allow_pickle=True).item()
     _sweep_arrs = np.load(sweep_arrays_path, allow_pickle=True).item()
 
@@ -139,7 +140,7 @@ def worker(task):
     Nelem = int(Nelems[ch[1]])
     z_dists = torch.ones(Nelem - 1, device=cuda_device) * float(params["inter_elem_dist"])
     z_dists = torch.cat((z_dists, torch.tensor([f], device=cuda_device)))
-    opt_x_base = rhos[ch][: int(Nelem * Nx // 2)]
+    opt_x_base = density_half_profile(rhos, ch, int(Nelem * Nx // 2))
 
     fzp_efficiencies = np.zeros((N_trials,), dtype=float)
     opt_efficiencies = np.zeros((N_trials,), dtype=float)
