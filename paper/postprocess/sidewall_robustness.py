@@ -21,6 +21,9 @@ from src.simparams import SimParams  # type: ignore
 from src.forwardmodels import forward_model_N_elements_mask_2d  # type: ignore
 from src.inversedesign_utils import zp_init  # type: ignore
 from paper.sweeps.density_io import density_half_profile, load_opt_rhos
+from src import console
+
+_LOG = "sidewall_robustness"
 
 
 DEFAULT_BASE_SWEEP_ID = "20260223_220525"
@@ -68,6 +71,11 @@ def worker(task):
     global _worker_gpu_id
     global _opt_rhos, _params, _sweep_arrs
     choice_idx, blur_radius_idx, choices, blur_radii = task
+    ch = choices[choice_idx]
+    console.info(
+        _LOG,
+        f"worker task choice={ch} blur_idx={blur_radius_idx} blur_radius={float(blur_radii[blur_radius_idx]):.4g}",
+    )
 
     gpu_id = _worker_gpu_id if _worker_gpu_id is not None else 0
     if torch.cuda.is_available():
@@ -87,7 +95,6 @@ def worker(task):
     sweep_arrs = _sweep_arrs
     Nelems = sweep_arrs["Nelems"]
 
-    ch = choices[choice_idx]
     blur_radius = blur_radii[blur_radius_idx]
 
     Nx = int(params["Nx"])
@@ -232,7 +239,10 @@ def worker(task):
 
 if __name__ == "__main__":
     args = _parse_args()
-    start_time = time.time()
+    start_time = console.script_start(_LOG, argv=sys.argv[1:])
+    console.kv(_LOG, "base_id", args.base_id)
+    console.kv(_LOG, "run_id", args.run_id)
+    console.kv(_LOG, "data_dir", args.data_dir)
     mp.set_start_method("spawn", force=True)
     os.environ.setdefault("OMP_NUM_THREADS", "1")
     os.environ.setdefault("MKL_NUM_THREADS", "1")
@@ -247,14 +257,14 @@ if __name__ == "__main__":
     workers_per_gpu = int(args.workers_per_gpu)
     max_workers = (n_gpus * workers_per_gpu) if n_gpus else workers_per_gpu
 
-    print(
-        f"sidewall_robustness: Using {n_gpus} GPU(s), {workers_per_gpu} worker(s) per GPU, {max_workers} total workers",
-        flush=True,
-    )
+    console.runtime_pool(_LOG, n_gpus=n_gpus, workers_per_gpu=workers_per_gpu, max_workers=max_workers)
 
     results_path = f"{args.data_dir}/fig1_N_sweeps_results_{args.base_id}_run_{args.run_id}.npz"
     params_path = f"{args.data_dir}/fig1_N_sweeps_params_{args.base_id}.npy"
     sweep_arrays_path = f"{args.data_dir}/fig1_N_sweeps_sweep_arrays_{args.base_id}.npy"
+    console.file_load(_LOG, results_path, label="input results")
+    console.file_load(_LOG, params_path, label="input params")
+    console.file_load(_LOG, sweep_arrays_path, label="input sweep arrays")
 
     # Load lightweight sweep arrays in main (worker processes load once via initializer)
     sweep_arrs_main = np.load(sweep_arrays_path, allow_pickle=True).item()
@@ -264,6 +274,7 @@ if __name__ == "__main__":
     Nelem_arr = [int(Nelems[ch[1]]) for ch in choices]
 
     blur_radii = np.linspace(0.5, 10.0, 20)
+    console.info(_LOG, f"sweep grid: {len(choices)} cascade choices × {len(blur_radii)} blur radii")
 
     # output arrays (same names as original script bottom-of-file)
     fzp_mean_efficiencies = np.zeros((len(choices), len(blur_radii)), dtype=float)
@@ -292,6 +303,7 @@ if __name__ == "__main__":
 
     completed = 0
     total = len(tasks)
+    console.info(_LOG, f"submitting {total} robustness tasks to process pool")
     with ProcessPoolExecutor(**pool_kw) as ex:
         futures = [ex.submit(worker, t) for t in tasks]
         for fut in as_completed(futures):
@@ -302,7 +314,12 @@ if __name__ == "__main__":
             opt_std_efficiencies[i, j] = out["opt_std"]
             completed += 1
             if completed % max(1, total // 20) == 0 or completed == total:
-                print(f"  completed {completed}/{total} tasks", flush=True)
+                console.progress(
+                    _LOG,
+                    completed,
+                    total,
+                    detail=f"last opt_mean={out['opt_mean']:.4f} fzp_mean={out['fzp_mean']:.4f}",
+                )
 
     save_time = get_formatted_datetime()
     save_path = f"{args.data_dir}/figA4b_sidewall_robustness_results_{args.base_id}_{save_time}.npz"
@@ -317,7 +334,5 @@ if __name__ == "__main__":
         Nelem_arr=np.array(Nelem_arr, dtype=np.int64),
         ID=np.array([args.base_id]),
     )
-    print(f"saved: {save_path}", flush=True)
-
-    end_time = time.time()
-    print(f"time elapsed: {round(end_time - start_time)} seconds", flush=True)
+    console.file_saved(_LOG, save_path)
+    console.script_done(_LOG, start_time)

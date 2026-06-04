@@ -118,6 +118,17 @@ python examples/xray_focusing_testing_partial_coherence.py
 
 These scripts are useful for verifying your installation or experimenting with parameters outside of the full sweep pipeline. On a GPU, each completes in a few minutes; a SLURM launcher is available at `hpc/slurm/run_example_gpu.sh`.
 
+### Console output
+
+Runs print standardized, timestamped lines via `src/console.py`, for example:
+
+```text
+[14:32:01] [sweep] INFO: parallel pool: 2 GPU(s), 2 worker(s)/GPU, 4 worker(s) total
+[14:32:01] [optimizer] INFO: beta stage 1/6: beta=1, constraints=off
+```
+
+Set `DIFFRACTIVE_CASCADES_QUIET=1` to suppress these messages.
+
 ## Direct Sweep Runner
 
 If you want to run individual optimization sweeps directly (bypassing `reproduce.py`):

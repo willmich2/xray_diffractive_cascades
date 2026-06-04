@@ -4,7 +4,10 @@ import argparse
 import os
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
+
+from src import console
 
 
 DEFAULT_DATA_DIR = os.environ.get("DIFFRACTIVE_CASCADES_DATA_DIR", "paper_data")
@@ -203,6 +206,10 @@ def main() -> None:
     if not args.targets:
         raise SystemExit("No targets specified. Use `list` to see available keys.")
 
+    start = console.script_start("reproduce", argv=sys.argv[1:])
+    console.kv("reproduce", "data_dir", args.data_dir)
+    console.kv("reproduce", "dry_run", args.dry_run)
+
     selected_keys = [target.key for target in TARGETS] if "all" in args.targets else args.targets
     unknown = [key for key in selected_keys if key not in TARGET_BY_KEY]
     if unknown:
@@ -213,14 +220,21 @@ def main() -> None:
     if args.data_dir:
         env["DIFFRACTIVE_CASCADES_DATA_DIR"] = args.data_dir
 
+    console.info("reproduce", f"running {len(selected_keys)} target(s): {', '.join(selected_keys)}")
     for key in selected_keys:
         target = TARGET_BY_KEY[key]
         cmd = _build_command(target, args)
-        print(f"\n[{target.key}] {target.description}", flush=True)
-        print(" ".join(cmd), flush=True)
+        console.banner("reproduce", f"{target.key}: {target.manuscript_result}")
+        console.info("reproduce", target.description)
+        console.command("reproduce", cmd)
         if args.dry_run:
+            console.info("reproduce", "dry-run: skipping subprocess execution")
             continue
+        target_start = time.time()
         subprocess.run(cmd, check=True, env=env)
+        console.elapsed("reproduce", f"target {target.key} complete", time.time() - target_start)
+
+    console.script_done("reproduce", start)
 
 
 if __name__ == "__main__":

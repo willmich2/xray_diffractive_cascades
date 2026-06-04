@@ -1,7 +1,10 @@
 import torch # type: ignore
 import torch.nn.functional as F # type: ignore
 from .forwardmodels import forward_model_N_elements_mask
+from . import console
 import nlopt # type: ignore
+
+_LOG = "optimizer"
 
 class TopologyOptimizerTorch(torch.nn.Module):
     def __init__(self, n_elements, filter_radius, mesh_resolution, epsilon, constraint_fac, P,
@@ -525,9 +528,23 @@ def run_torch_optimization(sim_params, opt_params, args, objective_function=None
     beta_values = opt_params.get("beta_schedule", [1, 2, 4, 8, 16, 32])
     min_beta = opt_params["min_beta"]
     current_x = model.rho.detach().numpy().copy()
-        
+
+    console.info(
+        _LOG,
+        (
+            f"starting topology optimization: Nelem={n_opt_elements}, "
+            f"n_design_vars={model.n}, filter_radius={R:.3g}, "
+            f"beta_schedule={beta_values}, min_beta={min_beta}, max_eval={max_eval}"
+        ),
+    )
+
     for i, beta in enumerate(beta_values):
-        # print(f"--- Iteration {i+1}: Beta = {beta} ---")
+        stage = f"{i + 1}/{len(beta_values)}"
+        constraints_on = beta >= min_beta
+        console.info(
+            _LOG,
+            f"beta stage {stage}: beta={beta}, constraints={'on' if constraints_on else 'off'}",
+        )
         model.beta = beta
         
         opt = nlopt.opt(nlopt.LD_MMA, model.n)
@@ -556,15 +573,20 @@ def run_torch_optimization(sim_params, opt_params, args, objective_function=None
         try:
             current_x = opt.optimize(current_x)
             max_f = opt.last_optimum_value()
-            
+            console.info(_LOG, f"beta stage {stage} finished: objective={max_f:.6g}")
         except nlopt.RoundoffLimited:
-            print("   Roundoff Limited.")
+            console.warn(_LOG, f"beta stage {stage}: NLopt roundoff limited (continuing)")
         except Exception as e:
             # Do not silently continue on CUDA OOM; free cache and fail fast.
             if "out of memory" in str(e).lower():
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
                 raise
-            print(f"   Error: {e}")
-            
+            console.warn(_LOG, f"beta stage {stage}: optimization error ({type(e).__name__}): {e}")
+
+    final_obj = obj_list[-1] if obj_list else float("nan")
+    console.info(
+        _LOG,
+        f"optimization complete: {len(obj_list)} objective evaluations, final_objective={final_obj:.6g}",
+    )
     return current_x, obj_list, intensity_list, extra_list, model

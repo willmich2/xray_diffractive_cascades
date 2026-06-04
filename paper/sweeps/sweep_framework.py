@@ -18,6 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from paper.sweeps.density_io import pack_binary_density, save_sweep_results
+from src import console
 from src.util import get_formatted_datetime
 
 
@@ -176,6 +177,15 @@ def _default_worker(task: dict[str, Any]) -> dict[str, Any]:
     global _worker_gpu_id
     gpu_id = _worker_gpu_id if _worker_gpu_id is not None else 0
     device = torch.device("cuda", gpu_id) if torch.cuda.is_available() else torch.device("cpu")
+    task_id = int(task.get("task_id", -1))
+    console.info(
+        "sweep.worker",
+        (
+            f"task {task_id} started on {device.type}"
+            + (f":{gpu_id}" if device.type == "cuda" else "")
+            + f" index={task.get('index')} axes={task.get('axis_values')}"
+        ),
+    )
     if torch.cuda.is_available():
         torch.cuda.set_device(gpu_id)
     try:
@@ -274,6 +284,14 @@ def _default_worker(task: dict[str, Any]) -> dict[str, Any]:
     opt_gain = focusing_gain(np.asarray(metrics["opt_intensity_1d"]), float(params["focusing_threshold"]))
     fzp_gain = focusing_gain(np.asarray(metrics["fzp_intensity_1d"]), float(params["focusing_threshold"]))
     obj_np = np.array([float(o) if hasattr(o, "item") else float(o) for o in obj_list], dtype=np.float64)
+    console.info(
+        "sweep.worker",
+        (
+            f"task {task_id} finished: opt_eff={float(metrics['opt_efficiency']):.4f} "
+            f"fzp_eff={float(metrics['fzp_efficiency']):.4f} "
+            f"opt_gain={opt_gain:.4f} fzp_gain={fzp_gain:.4f}"
+        ),
+    )
     return {
         "status": "ok",
         "index": tuple(task["index"]),
@@ -395,33 +413,49 @@ def _collect_results(results: list[dict[str, Any]], axes: dict[str, Any], config
 
 
 def run_sweep(runtime: SweepRuntimeConfig) -> None:
+    log = "sweep"
+    sweep_start = console.script_start(log, argv=[f"config={runtime.config_module}"])
     base = _build_base_params("paper.sweeps.standard_params")
     tasks, config, axes = _build_tasks(runtime.config_module, base)
     save_prefix = str(config["SAVE_PREFIX"])
     save_dir = runtime.save_dir or config.get("SAVE_DIR") or os.environ.get("DIFFRACTIVE_CASCADES_DATA_DIR", "outputs")
     n_runs = int(runtime.n_runs if runtime.n_runs is not None else config.get("N_RUNS", 1))
     save_run_suffix = bool(config.get("SAVE_RUN_SUFFIX", True)) or n_runs > 1
+    console.kv(log, "save_prefix", save_prefix)
+    console.kv(log, "save_dir", save_dir)
+    console.kv(log, "n_tasks", len(tasks))
+    console.kv(log, "n_runs", n_runs)
+    console.describe_axes(log, axes)
     if runtime.dry_run:
-        print(f"[dry-run] config={runtime.config_module} tasks={len(tasks)} axes={list(axes.keys())}", flush=True)
+        console.info(log, f"dry-run only (no simulations); config={runtime.config_module}")
+        console.script_done(log, sweep_start)
         return
     os.makedirs(save_dir, exist_ok=True)
+    console.info(log, f"created output directory {save_dir}")
 
     n_gpus = min(4, torch.cuda.device_count()) if torch.cuda.is_available() else 0
     workers_per_gpu = int(runtime.workers_per_gpu)
     max_workers = int(runtime.max_workers) if runtime.max_workers is not None else ((n_gpus * workers_per_gpu) if n_gpus else workers_per_gpu)
+    console.runtime_pool(log, n_gpus=n_gpus, workers_per_gpu=workers_per_gpu, max_workers=max_workers)
     ctx = mp.get_context("spawn")
     gpu_queue = ctx.Queue()
     os.environ.setdefault("OMP_NUM_THREADS", "1")
     os.environ.setdefault("MKL_NUM_THREADS", "1")
     os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+    console.info(log, "set OMP/MKL/OpenBLAS threads to 1 for worker processes")
 
     save_time = get_formatted_datetime()
     params_for_save = _prepare_params_for_save(base, config, axes)
-    np.save(f"{save_dir}/{save_prefix}_params_{save_time}.npy", params_for_save)
-    np.save(f"{save_dir}/{save_prefix}_sweep_arrays_{save_time}.npy", {k: np.asarray(v) for k, v in axes.items()})
+    params_path = f"{save_dir}/{save_prefix}_params_{save_time}.npy"
+    arrays_path = f"{save_dir}/{save_prefix}_sweep_arrays_{save_time}.npy"
+    np.save(params_path, params_for_save)
+    np.save(arrays_path, {k: np.asarray(v) for k, v in axes.items()})
+    console.file_saved(log, params_path)
+    console.file_saved(log, arrays_path)
 
     worker_fn = config.get("worker_fn", _default_worker)
     for run_id in range(n_runs):
+        console.banner(log, f"run {run_id + 1}/{n_runs}")
         run_tasks = []
         for t in tasks:
             td = dict(t)
@@ -431,7 +465,10 @@ def run_sweep(runtime: SweepRuntimeConfig) -> None:
             gpu_id = (i // workers_per_gpu) % n_gpus if n_gpus else 0
             gpu_queue.put(gpu_id)
         start = time.time()
+        console.info(log, f"submitting {len(run_tasks)} tasks to process pool")
         results: list[dict[str, Any]] = []
+        completed = 0
+        total = len(run_tasks)
         with ProcessPoolExecutor(
             max_workers=max_workers,
             mp_context=ctx,
@@ -441,8 +478,30 @@ def run_sweep(runtime: SweepRuntimeConfig) -> None:
             futures = [ex.submit(worker_fn, t) for t in run_tasks]
             for fut in as_completed(futures):
                 try:
-                    results.append(fut.result())
+                    item = fut.result()
+                    results.append(item)
+                    completed += 1
+                    status = item.get("status", "ok")
+                    task_id = item.get("task_id", -1)
+                    if status == "ok":
+                        r = item.get("result", {})
+                        console.info(
+                            log,
+                            (
+                                f"task {task_id} collected: opt_eff={float(r.get('opt_eff', float('nan'))):.4f} "
+                                f"fzp_eff={float(r.get('fzp_eff', float('nan'))):.4f}"
+                            ),
+                        )
+                    else:
+                        console.warn(
+                            log,
+                            f"task {task_id} failed: {item.get('error_type')}: {item.get('error_message')}",
+                        )
+                    if completed % max(1, total // 20) == 0 or completed == total:
+                        console.progress(log, completed, total)
                 except BaseException as exc:
+                    completed += 1
+                    console.error(log, f"worker raised {type(exc).__name__}: {exc}")
                     results.append(
                         {
                             "status": "error",
@@ -453,14 +512,18 @@ def run_sweep(runtime: SweepRuntimeConfig) -> None:
                             "traceback": traceback.format_exc(),
                         }
                     )
+                    if completed % max(1, total // 20) == 0 or completed == total:
+                        console.progress(log, completed, total)
         arrays = _collect_results(results, axes, config)
+        n_failed = len(arrays.get("failed_task_ids", []))
+        if n_failed:
+            console.warn(log, f"{n_failed} task(s) failed; see failed_task_* arrays in output")
         if save_run_suffix:
             arrays["run_id"] = np.int64(run_id)
             result_path = f"{save_dir}/{save_prefix}_results_{save_time}_run_{run_id}.npz"
         else:
             result_path = f"{save_dir}/{save_prefix}_results_{save_time}.npz"
         save_sweep_results(result_path, arrays)
-        print(
-            f"Run {run_id + 1}/{n_runs} complete for {save_prefix} in {((time.time() - start)/60):.2f} min",
-            flush=True,
-        )
+        console.file_saved(log, result_path)
+        console.elapsed(log, f"run {run_id + 1}/{n_runs} for {save_prefix}", time.time() - start)
+    console.script_done(log, sweep_start)

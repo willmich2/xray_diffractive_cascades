@@ -6,6 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from paper.sweeps.studies import iter_studies, resolve_study
 from paper.sweeps.sweep_framework import SweepRuntimeConfig, run_sweep
+from src import console
 
 
 def _print_available_studies() -> None:
@@ -46,10 +47,15 @@ def main() -> None:
         except KeyError as exc:
             parser.error(str(exc))
         config_module = study.config_module
-        print(f"Resolved study '{args.study}' -> {config_module}", flush=True)
+        console.info("run_sweep", f"resolved study '{args.study}' -> {config_module}")
 
     if not config_module:
         parser.error("One of --config or --study is required unless --list-studies is set.")
+
+    start = console.script_start("run_sweep")
+    console.kv("run_sweep", "config_module", config_module)
+    console.kv("run_sweep", "save_dir", args.save_dir or "(from config/env)")
+    console.kv("run_sweep", "dry_run", args.dry_run)
 
     runtime = SweepRuntimeConfig(
         config_module=config_module,
@@ -60,6 +66,7 @@ def main() -> None:
         dry_run=args.dry_run,
     )
     run_sweep(runtime)
+    console.script_done("run_sweep", start)
 
 
 if __name__ == "__main__":

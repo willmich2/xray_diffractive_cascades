@@ -21,6 +21,9 @@ from src.forwardmodels import (
 )
 from src.inversedesign_utils import zp_init
 from src.optimizer import run_torch_optimization
+from src import console
+
+_LOG = "focal_sweep_comparison"
 from paper.sweeps.density_io import pack_binary_density
 from paper.sweeps.standard_params import (
     MATERIAL_DEFAULT,
@@ -201,7 +204,9 @@ def zp_init_fixed_design(lam_center, f_scalar, min_feature_size_local, one, sim_
 
 
 if __name__ == "__main__":
-    script_start_time = time.time()
+    script_start_time = console.script_start(_LOG)
+    console.kv(_LOG, "Nelem", Nelem)
+    console.kv(_LOG, "n_sweep_tensors", n_sweep_tensors)
     save_time = get_formatted_datetime()
     save_dir = os.environ.get("DIFFRACTIVE_CASCADES_DATA_DIR", "outputs")
     os.makedirs(save_dir, exist_ok=True)
@@ -210,7 +215,7 @@ if __name__ == "__main__":
     z_single = build_z_single()
     fwd_model_args_run1 = (elem_params, focusing_mask, [z_single], center_offsets, [1.0])
 
-    print("Run 1: single z at focal length", flush=True)
+    console.banner(_LOG, "run 1: single focal plane")
     opt_start_time = time.time()
     raw_design_run1, obj_list_run1, intensity_list_run1, extra_list_run1, model_run1 = run_torch_optimization(
         sim_params,
@@ -218,8 +223,7 @@ if __name__ == "__main__":
         fwd_model_args_run1,
         objective_function=forward_model_N_elements_mask_multi_z,
     )
-    opt_elapsed_run1 = time.time() - opt_start_time
-    print(f"Run 1 optimization time: {round(opt_elapsed_run1)} seconds", flush=True)
+    console.elapsed(_LOG, "run 1 optimization", time.time() - opt_start_time)
 
     x_tensor_run1 = torch.tensor(raw_design_run1, dtype=torch.float64, device=device)
     rho_tilde_run1, _ = model_run1.filter_density(x_tensor_run1)
@@ -253,7 +257,7 @@ if __name__ == "__main__":
     z_weights_run2 = torch.tensor(z_weights_run2, device=device, dtype=torch.float64)
     fwd_model_args_run2 = (elem_params, focusing_mask, z_distances_set_run2, center_offsets, z_weights_run2)
 
-    print(f"Run 2: {n_sweep_tensors} z tensors sweeping around focal length", flush=True)
+    console.banner(_LOG, f"run 2: {n_sweep_tensors} focal planes in objective")
     opt_start_time = time.time()
     raw_design_run2, obj_list_run2, intensity_list_run2, extra_list_run2, model_run2 = run_torch_optimization(
         sim_params,
@@ -261,8 +265,7 @@ if __name__ == "__main__":
         fwd_model_args_run2,
         objective_function=forward_model_N_elements_mask_multi_z,
     )
-    opt_elapsed_run2 = time.time() - opt_start_time
-    print(f"Run 2 optimization time: {round(opt_elapsed_run2)} seconds", flush=True)
+    console.elapsed(_LOG, "run 2 optimization", time.time() - opt_start_time)
 
     x_tensor_run2 = torch.tensor(raw_design_run2, dtype=torch.float64, device=device)
     rho_tilde_run2, _ = model_run2.filter_density(x_tensor_run2)
@@ -423,5 +426,5 @@ if __name__ == "__main__":
         opt_intensity_run2_z_sweep=opt_intensity_run2_z_sweep,
     )
 
-    total_elapsed = time.time() - script_start_time
-    print(f"Time elapsed: {round(total_elapsed / 60, 2)} minutes", flush=True)
+    console.file_saved(_LOG, f"{save_dir}/fig4b_xray_focusing_focal_sweep_comparison_results_{save_time}.npz")
+    console.script_done(_LOG, script_start_time)

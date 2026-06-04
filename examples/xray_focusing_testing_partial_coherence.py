@@ -22,6 +22,9 @@ from src.forwardmodels import (
 )
 from src.inversedesign_utils import zp_init
 from src.optimizer import run_torch_optimization
+from src import console
+
+_LOG = "xray_focusing_partial_coherence"
 from paper.sweeps.density_io import pack_binary_density
 from paper.sweeps.standard_params import (
     MATERIAL_DEFAULT,
@@ -170,10 +173,15 @@ center_offsets = None
 fwd_model_args = (elem_params, mask, z_dists, center_offsets)
 
 if __name__ == "__main__":
-    script_start_time = time.time()
+    script_start_time = console.script_start(_LOG)
+    console.kv(_LOG, "Nelem", Nelem)
+    console.kv(_LOG, "sigma_s", sigma_s)
+    console.kv(_LOG, "sigma_g", sigma_g)
+    console.kv(_LOG, "n_modes", n_modes)
     save_time = get_formatted_datetime()
     save_dir = os.environ.get("DIFFRACTIVE_CASCADES_DATA_DIR", "outputs")
     os.makedirs(save_dir, exist_ok=True)
+    console.banner(_LOG, "partial-coherence optimization")
     opt_start_time = time.time()
     raw_design, obj_list, intensity_list, extra_list, model = run_torch_optimization(
         sim_params,
@@ -181,7 +189,7 @@ if __name__ == "__main__":
         fwd_model_args,
         objective_function=forward_model_N_elements_mask_partial_coherence,
     )
-    opt_elapsed = time.time() - opt_start_time
+    console.elapsed(_LOG, "optimization", time.time() - opt_start_time)
 
     x_tensor = torch.tensor(raw_design, dtype=torch.float64)
     rho_tilde, _ = model.filter_density(x_tensor)
@@ -231,10 +239,23 @@ if __name__ == "__main__":
     fzp_eff_coh = coh_metrics["fzp_efficiency"]
     fzp_x = pc_metrics["fzp_x"]
 
-    print(f"Opt  (PC)  obj={opt_obj_pc_val:.6f}  width={opt_width_pc}  eff={opt_eff_pc:.6f}", flush=True)
-    print(f"Opt  (coh) obj={opt_obj_coh_val:.6f}  width={opt_width_coh}  eff={opt_eff_coh:.6f}", flush=True)
-    print(f"FZP  (PC)  obj={float(fzp_obj_pc):.6f}  width={fzp_width_pc}  eff={fzp_eff_pc:.6f}", flush=True)
-    print(f"FZP  (coh) obj={float(fzp_obj_coh):.6f}  width={fzp_width_coh}  eff={fzp_eff_coh:.6f}", flush=True)
+    console.banner(_LOG, "metrics: partial coherence vs coherent")
+    console.info(
+        _LOG,
+        f"opt PC  obj={opt_obj_pc_val:.6f} width={opt_width_pc} eff={opt_eff_pc:.6f}",
+    )
+    console.info(
+        _LOG,
+        f"opt coh obj={opt_obj_coh_val:.6f} width={opt_width_coh} eff={opt_eff_coh:.6f}",
+    )
+    console.info(
+        _LOG,
+        f"fzp PC  obj={float(fzp_obj_pc):.6f} width={fzp_width_pc} eff={fzp_eff_pc:.6f}",
+    )
+    console.info(
+        _LOG,
+        f"fzp coh obj={float(fzp_obj_coh):.6f} width={fzp_width_coh} eff={fzp_eff_coh:.6f}",
+    )
 
     # --- Save ---
     obj_list_np = np.array([float(o) if hasattr(o, 'item') else float(o) for o in obj_list])
@@ -305,5 +326,5 @@ if __name__ == "__main__":
         z_dists=z_dists_save,
     )
 
-    total_elapsed = time.time() - script_start_time
-    print(f"Time elapsed: {round(total_elapsed / 60, 2)} minutes", flush=True)
+    console.file_saved(_LOG, f"{save_dir}/xray_focusing_partial_coherence_results_{save_time}.npz")
+    console.script_done(_LOG, script_start_time)
