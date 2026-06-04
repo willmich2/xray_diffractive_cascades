@@ -17,7 +17,12 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from paper.sweeps.density_io import pack_binary_density, save_sweep_results
+from paper.sweeps.density_io import (
+    INTENSITY_DTYPE,
+    compute_fill_factors,
+    pack_binary_density,
+    save_sweep_results,
+)
 from src import console
 from src.util import get_formatted_datetime
 
@@ -303,12 +308,12 @@ def _default_worker(task: dict[str, Any]) -> dict[str, Any]:
             "opt_eff": float(metrics["opt_efficiency"]),
             "opt_width": float(metrics["opt_width"]),
             "opt_gain": float(opt_gain),
-            "opt_intensity": np.asarray(metrics["opt_intensity_1d"]),
+            "opt_intensity": np.asarray(metrics["opt_intensity_1d"], dtype=INTENSITY_DTYPE),
             "fzp_obj": float(metrics["fzp_final_obj"]),
             "fzp_eff": float(metrics["fzp_efficiency"]),
             "fzp_width": float(metrics["fzp_width"]),
             "fzp_gain": float(fzp_gain),
-            "fzp_intensity": np.asarray(metrics["fzp_intensity_1d"]),
+            "fzp_intensity": np.asarray(metrics["fzp_intensity_1d"], dtype=INTENSITY_DTYPE),
         },
     }
 
@@ -372,8 +377,8 @@ def _collect_results(results: list[dict[str, Any]], axes: dict[str, Any], config
         "fzp_widths": np.full(shape, np.nan),
     }
     if nx_store > 0:
-        out["opt_intensities"] = np.zeros(shape + (nx_store,))
-        out["fzp_intensities"] = np.zeros(shape + (nx_store,))
+        out["opt_intensities"] = np.zeros(shape + (nx_store,), dtype=INTENSITY_DTYPE)
+        out["fzp_intensities"] = np.zeros(shape + (nx_store,), dtype=INTENSITY_DTYPE)
     failed = []
     for item in results:
         idx = tuple(item["index"])
@@ -401,14 +406,23 @@ def _collect_results(results: list[dict[str, Any]], axes: dict[str, Any], config
                 oi = np.pad(oi, (0, nx_store - int(oi.shape[0])), mode="constant")
             if fi.shape[0] < nx_store:
                 fi = np.pad(fi, (0, nx_store - int(fi.shape[0])), mode="constant")
-            out["opt_intensities"][idx] = oi
-            out["fzp_intensities"][idx] = fi
+            out["opt_intensities"][idx] = np.asarray(oi, dtype=INTENSITY_DTYPE)
+            out["fzp_intensities"][idx] = np.asarray(fi, dtype=INTENSITY_DTYPE)
     out["failed_task_ids"] = np.asarray([f["task_id"] for f in failed], dtype=np.int64)
     out["failed_task_indices"] = np.asarray([f["index"] for f in failed], dtype=np.int64).reshape(-1, len(shape))
     out["failed_task_errors"] = np.asarray(
         [f"{f.get('error_type','Error')}: {f.get('error_message', 'unknown')}" for f in failed],
         dtype=object,
     )
+    nelem_axis_name = next((name for name in ("Nelems", "Nelem") if name in axes), None)
+    if nelem_axis_name is not None and nx_store > 0:
+        nelem_axis = list(axes.keys()).index(nelem_axis_name)
+        out["fill_factors"] = compute_fill_factors(
+            out["opt_rhos"],
+            axes[nelem_axis_name],
+            nx=nx_store,
+            nelem_axis=nelem_axis,
+        )
     return out
 
 
@@ -523,7 +537,7 @@ def run_sweep(runtime: SweepRuntimeConfig) -> None:
             result_path = f"{save_dir}/{save_prefix}_results_{save_time}_run_{run_id}.npz"
         else:
             result_path = f"{save_dir}/{save_prefix}_results_{save_time}.npz"
-        save_sweep_results(result_path, arrays)
+        save_sweep_results(result_path, arrays, keys=config.get("RESULTS_SAVE_KEYS"))
         console.file_saved(log, result_path)
         console.elapsed(log, f"run {run_id + 1}/{n_runs} for {save_prefix}", time.time() - start)
     console.script_done(log, sweep_start)

@@ -1,8 +1,10 @@
 import numpy as np
 
+from paper.sweeps.density_io import FIG1_N_SWEEPS_SAVE_KEYS
 from paper.sweeps.standard_params import NX_DEFAULT
 
 SAVE_PREFIX = "fig1_N_sweeps"
+RESULTS_SAVE_KEYS = FIG1_N_SWEEPS_SAVE_KEYS
 SAVE_DIR = None
 N_RUNS = 5
 SWEEP_AXES = {

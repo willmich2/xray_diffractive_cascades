@@ -24,7 +24,7 @@ from src.optimizer import run_torch_optimization
 from src import console
 
 _LOG = "focal_sweep_comparison"
-from paper.sweeps.density_io import pack_binary_density
+from paper.sweeps.density_io import save_sweep_results
 from paper.sweeps.standard_params import (
     MATERIAL_DEFAULT,
     MATERIAL_MAP_AU,
@@ -401,29 +401,31 @@ if __name__ == "__main__":
     z_distances_set_run2_np = np.stack([z.cpu().numpy() for z in z_distances_set_run2])
     mask_save = focusing_mask.cpu().numpy()
 
-    np.savez_compressed(
+    save_sweep_results(
         f"{save_dir}/fig4b_xray_focusing_focal_sweep_comparison_results_{save_time}.npz",
-        opt_intensity=opt_intensity_run1_center,
-        opt_efficiency=float(opt_efficiency_run1),
-        opt_obj=float(opt_final_obj_run1),
-        opt_width=float(opt_width_run1),
-        rho_bar=pack_binary_density(rho_bar_run1.detach().cpu().numpy()),
-        obj_list=obj_list_run1_np,
-        z_distances_run1=z_distances_run1_np,
-        opt_intensity_run2_center=opt_intensity_run2_center,
-        rho_bar_run2=pack_binary_density(rho_bar_run2.detach().cpu().numpy()),
-        obj_list_run2=obj_list_run2_np,
-        z_distances_set_run2=z_distances_set_run2_np,
-        opt_obj_run2=float(opt_final_obj_run2),
-        zp_intensity=zp_intensity,
-        zp_x=zp_x_tensor.cpu().numpy(),
-        zp_width=float(zp_width),
-        zp_efficiency=float(zp_efficiency),
-        mask=mask_save,
-        z_eval=z_eval.cpu().numpy(),
-        zp_intensity_z_sweep=zp_intensity_z_sweep,
-        opt_intensity_run1_z_sweep=opt_intensity_run1_z_sweep,
-        opt_intensity_run2_z_sweep=opt_intensity_run2_z_sweep,
+        {
+            "opt_intensity": opt_intensity_run1_center,
+            "opt_efficiency": float(opt_efficiency_run1),
+            "opt_obj": float(opt_final_obj_run1),
+            "opt_width": float(opt_width_run1),
+            "rho_bar": rho_bar_run1.detach().cpu().numpy(),
+            "obj_list": obj_list_run1_np,
+            "z_distances_run1": z_distances_run1_np,
+            "opt_intensity_run2_center": opt_intensity_run2_center,
+            "rho_bar_run2": rho_bar_run2.detach().cpu().numpy(),
+            "obj_list_run2": obj_list_run2_np,
+            "z_distances_set_run2": z_distances_set_run2_np,
+            "opt_obj_run2": float(opt_final_obj_run2),
+            "zp_intensity": zp_intensity,
+            "zp_x": zp_x_tensor.cpu().numpy(),
+            "zp_width": float(zp_width),
+            "zp_efficiency": float(zp_efficiency),
+            "mask": mask_save,
+            "z_eval": z_eval.cpu().numpy(),
+            "zp_intensity_z_sweep": zp_intensity_z_sweep,
+            "opt_intensity_run1_z_sweep": opt_intensity_run1_z_sweep,
+            "opt_intensity_run2_z_sweep": opt_intensity_run2_z_sweep,
+        },
     )
 
     console.file_saved(_LOG, f"{save_dir}/fig4b_xray_focusing_focal_sweep_comparison_results_{save_time}.npz")
